@@ -1,6 +1,6 @@
 import UserFormModal, { type UserFormData } from '@/Components/Admin/UserFormModal';
 import { Button } from '@/Components/UI/Button';
-import { PlusIcon, UsersIcon } from '@/Components/UI/Icons';
+import { AlertTriangleIcon, ClockIcon, PackageIcon, PlusIcon, TribeIcon, UsersIcon } from '@/Components/UI/Icons';
 import PageHeader from '@/Components/UI/PageHeader';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -22,6 +22,10 @@ interface UserRow {
     requested_tribe_id: number | null;
     tribe: { id: number; name_ar: string; slug: string } | null;
     requested_tribe: { id: number; name_ar: string; slug: string } | null;
+    join_intent: 'member' | 'found_tribe' | 'claim_admin' | null;
+    claim_reason: string | null;
+    requested_package: { id: number; name_ar: string; price_monthly: number; currency: string } | null;
+    current_admins: Array<{ name: string; last_active_at: string | null }>;
     is_active: boolean;
     is_pending_join: boolean;
     email_verified_at: string | null;
@@ -337,6 +341,7 @@ function UserTableRow({
                                 {user.phone}
                             </div>
                         )}
+                        {user.is_pending_join && <RequestInfo user={user} />}
                     </div>
                 </div>
             </td>
@@ -360,7 +365,7 @@ function UserTableRow({
             {/* القبيلة */}
             <td className="px-3 py-3 hidden lg:table-cell">
                 {user.tribe ? (
-                    <span className="text-brown-mid text-sm">🏷️ {user.tribe.name_ar}</span>
+                    <span className="inline-flex items-center gap-1.5 text-brown-mid text-sm"><TribeIcon className="w-4 h-4" /> {user.tribe.name_ar}</span>
                 ) : user.requested_tribe ? (
                     <span className="text-amber-700 text-xs">
                         ⏳ طلب: {user.requested_tribe.name_ar}
@@ -442,6 +447,69 @@ function UserTableRow({
                 </div>
             </td>
         </tr>
+    );
+}
+
+/* ═══════════════════════════════════════════════
+   RequestInfo — تفاصيل طلب الانضمام (النوع + الباقة + المطالبة)
+   ═══════════════════════════════════════════════ */
+const INTENT_META: Record<string, { label: string; cls: string }> = {
+    member:      { label: 'عضو',          cls: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+    found_tribe: { label: 'تأسيس قبيلة',  cls: 'bg-gold-soft text-brown-dark border-gold/40' },
+    claim_admin: { label: 'مطالبة بالإدارة', cls: 'bg-amber-100 text-amber-800 border-amber-300' },
+};
+
+function timeAgo(iso: string | null): string {
+    if (!iso) return 'لا نشاط مسجّل';
+    const diff = Date.now() - new Date(iso).getTime();
+    const days = Math.floor(diff / 86400000);
+    if (days >= 30) return `منذ ${Math.floor(days / 30)} شهر`;
+    if (days >= 1) return `منذ ${days} يوم`;
+    const hours = Math.floor(diff / 3600000);
+    if (hours >= 1) return `منذ ${hours} ساعة`;
+    return 'نشِط الآن';
+}
+
+function RequestInfo({ user }: { readonly user: UserRow }) {
+    const intent = user.join_intent ?? 'member';
+    const meta = INTENT_META[intent];
+
+    return (
+        <div className="mt-1.5 flex flex-col gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+                <span className={`inline-block px-2 py-0.5 rounded-full border text-[10px] font-bold ${meta.cls}`}>
+                    {meta.label}
+                </span>
+                {user.requested_package && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gold-soft/50 border border-gold/30 text-brown-dark text-[10px] font-bold">
+                        <PackageIcon className="w-3 h-3" />
+                        {user.requested_package.name_ar}
+                        {user.requested_package.price_monthly > 0
+                            ? ` — ${user.requested_package.price_monthly.toLocaleString('en-US')} ${user.requested_package.currency}/شهر`
+                            : ' — مجانًا'}
+                    </span>
+                )}
+            </div>
+
+            {intent === 'claim_admin' && (
+                <div className="text-[11px] bg-amber-50 border border-amber-200 rounded-lg p-2 text-amber-900 leading-relaxed max-w-sm">
+                    <div className="flex items-center gap-1.5 font-bold mb-0.5">
+                        <AlertTriangleIcon className="w-3.5 h-3.5" /> طلب نقل إدارة
+                    </div>
+                    {user.current_admins.length > 0 ? (
+                        user.current_admins.map((a) => (
+                            <div key={a.name} className="flex items-center gap-1.5">
+                                <ClockIcon className="w-3.5 h-3.5 shrink-0" />
+                                المدير الحالي «{a.name}» — آخر نشاط: <strong>{timeAgo(a.last_active_at)}</strong>
+                            </div>
+                        ))
+                    ) : (
+                        <div>لا يوجد مدير حالي مسجّل لهذه القبيلة.</div>
+                    )}
+                    {user.claim_reason && <div className="mt-1 text-amber-800">السبب: {user.claim_reason}</div>}
+                </div>
+            )}
+        </div>
     );
 }
 

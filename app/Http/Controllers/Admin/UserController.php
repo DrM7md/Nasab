@@ -7,6 +7,7 @@ use App\Models\Tribe;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -47,10 +48,34 @@ class UserController extends Controller
                        ->orWhere('national_id', 'like', "%{$search}%");
                 })
             )
-            ->with(['tribe:id,name_ar,slug', 'requestedTribe:id,name_ar,slug'])
+            ->with([
+                'tribe:id,name_ar,slug',
+                'requestedTribe:id,name_ar,slug',
+                'requestedPackage:id,name_ar,price_monthly,currency',
+            ])
             ->orderBy('name');
 
-        $users = $query->paginate($perPage)->withQueryString()->through(fn ($u) => [
+        $paginator = $query->paginate($perPage)->withQueryString();
+
+        // لطلبات المطالبة: نجلب المدير الحالي للقبيلة المستهدفة + آخر نشاطه
+        $claimTribeIds = collect($paginator->items())
+            ->filter(fn ($u) => $u->join_intent === User::INTENT_CLAIM_ADMIN)
+            ->pluck('requested_tribe_id')->filter()->unique()->all();
+
+        $adminMap = [];
+        if ($claimTribeIds) {
+            User::whereIn('tribe_id', $claimTribeIds)
+                ->where('role', User::ROLE_TRIBE_ADMIN)
+                ->get(['id', 'name', 'tribe_id', 'last_active_at'])
+                ->each(function ($a) use (&$adminMap) {
+                    $adminMap[$a->tribe_id][] = [
+                        'name'           => $a->name,
+                        'last_active_at' => $a->last_active_at?->toIso8601String(),
+                    ];
+                });
+        }
+
+        $users = $paginator->through(fn ($u) => [
             'id'                 => $u->id,
             'name'               => $u->name,
             'email'              => $u->email,
@@ -71,6 +96,17 @@ class UserController extends Controller
                 'name_ar' => $u->requestedTribe->name_ar,
                 'slug' => $u->requestedTribe->slug,
             ] : null,
+            'join_intent'        => $u->join_intent,
+            'claim_reason'       => $u->claim_reason,
+            'requested_package'  => $u->requestedPackage ? [
+                'id'            => $u->requestedPackage->id,
+                'name_ar'       => $u->requestedPackage->name_ar,
+                'price_monthly' => (float) $u->requestedPackage->price_monthly,
+                'currency'      => $u->requestedPackage->currency,
+            ] : null,
+            'current_admins'     => $u->join_intent === User::INTENT_CLAIM_ADMIN
+                ? ($adminMap[$u->requested_tribe_id] ?? [])
+                : [],
             'is_active'          => (bool) $u->is_active,
             'is_pending_join'    => $u->tribe_id === null && $u->requested_tribe_id !== null,
             'email_verified_at'  => $u->email_verified_at?->toIso8601String(),
@@ -114,19 +150,62 @@ class UserController extends Controller
             'لا يوجد طلب انضمام معلّق لهذا المستخدم.'
         );
 
-        // tribe_admin يعتمد فقط طلبات قبيلته
         $currentUser = $request->user();
-        if (! $currentUser->isSuperAdmin() && $user->requested_tribe_id !== $currentUser->tribe_id) {
+        $intent = $user->join_intent ?? User::INTENT_MEMBER;
+
+        // طلبات الإدارة (تأسيس/مطالبة) — للمدير العام فقط لأنها تفعّل قبيلة أو تنقل إدارة
+        if ($intent !== User::INTENT_MEMBER) {
+            abort_unless($currentUser->isSuperAdmin(), 403, 'اعتماد طلبات الإدارة مقتصر على المدير العام.');
+        } elseif (! $currentUser->isSuperAdmin() && $user->requested_tribe_id !== $currentUser->tribe_id) {
+            // عضو عادي — tribe_admin يعتمد طلبات قبيلته فقط
             abort(403, 'يمكنك اعتماد الطلبات المتعلقة بقبيلتك فقط.');
         }
 
-        $user->update([
-            'tribe_id'           => $user->requested_tribe_id,
-            'requested_tribe_id' => null,
-            'role'               => User::ROLE_MEMBER,
-        ]);
+        DB::transaction(function () use ($user, $intent) {
+            $tribe = Tribe::find($user->requested_tribe_id);
 
-        return back()->with('success', "تم اعتماد انضمام {$user->name} للقبيلة.");
+            if ($intent === User::INTENT_FOUND_TRIBE && $tribe) {
+                // تفعيل القبيلة الجديدة + إسناد الباقة + ترقية المؤسّس مديرًا
+                $tribe->update(['is_active' => true, 'package_id' => $user->requested_package_id]);
+                $this->makeAdmin($user, $tribe->id);
+            } elseif ($intent === User::INTENT_CLAIM_ADMIN && $tribe) {
+                // نقل الإدارة: تخفيض المديرين الحاليين ثم ترقية المطالِب + الباقة
+                User::where('tribe_id', $tribe->id)
+                    ->where('role', User::ROLE_TRIBE_ADMIN)
+                    ->update(['role' => User::ROLE_MEMBER]);
+                $tribe->update(['package_id' => $user->requested_package_id]);
+                $this->makeAdmin($user, $tribe->id);
+            } else {
+                // عضو عادي
+                $user->update([
+                    'tribe_id'           => $user->requested_tribe_id,
+                    'requested_tribe_id' => null,
+                    'join_intent'        => null,
+                    'role'               => User::ROLE_MEMBER,
+                ]);
+            }
+        });
+
+        $msg = match ($intent) {
+            User::INTENT_FOUND_TRIBE => "تم اعتماد تأسيس القبيلة وتعيين {$user->name} مديرًا لها.",
+            User::INTENT_CLAIM_ADMIN => "تم نقل إدارة القبيلة إلى {$user->name}.",
+            default                  => "تم اعتماد انضمام {$user->name} للقبيلة.",
+        };
+
+        return back()->with('success', $msg);
+    }
+
+    /** يرقّي المستخدم إلى مدير قبيلة ويُفرغ حقول الطلب. */
+    protected function makeAdmin(User $user, int $tribeId): void
+    {
+        $user->update([
+            'tribe_id'             => $tribeId,
+            'requested_tribe_id'   => null,
+            'requested_package_id' => null,
+            'claim_reason'         => null,
+            'join_intent'          => null,
+            'role'                 => User::ROLE_TRIBE_ADMIN,
+        ]);
     }
 
     /**

@@ -15,6 +15,7 @@ use Illuminate\Notifications\Notifiable;
     'name', 'email', 'password',
     'phone', 'national_id', 'nationality', 'id_card_photo',
     'role', 'linked_person_id', 'is_active',
+    'join_intent', 'requested_package_id', 'claim_reason', 'last_active_at',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
@@ -28,12 +29,17 @@ class User extends Authenticatable
     public const ROLE_MEMBER       = 'member';
     public const ROLE_VIEWER       = 'viewer';
 
+    public const INTENT_MEMBER      = 'member';
+    public const INTENT_FOUND_TRIBE = 'found_tribe';
+    public const INTENT_CLAIM_ADMIN = 'claim_admin';
+
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
             'is_active'         => 'boolean',
+            'last_active_at'    => 'datetime',
         ];
     }
 
@@ -49,6 +55,11 @@ class User extends Authenticatable
     public function requestedTribe(): BelongsTo
     {
         return $this->belongsTo(Tribe::class, 'requested_tribe_id');
+    }
+
+    public function requestedPackage(): BelongsTo
+    {
+        return $this->belongsTo(Package::class, 'requested_package_id');
     }
 
     public function linkedPerson(): BelongsTo
