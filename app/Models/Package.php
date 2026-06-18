@@ -16,7 +16,7 @@ class Package extends Model
      * data_export قابلة للفرض برمجيًا؛ والبقية حاليًا إعلامية/تشغيلية.
      */
     public const CAPABILITIES = [
-        'data_export'        => 'تصدير بيانات الشجرة (CSV)',
+        'data_export'        => 'تصدير بيانات الشجرة (Excel)',
         'custom_certificate' => 'وثيقة نسب قابلة للطباعة',
         'custom_subdomain'   => 'نطاق فرعي مخصّص',
         'priority_support'   => 'دعم بأولوية',

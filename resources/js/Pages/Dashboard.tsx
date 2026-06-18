@@ -140,7 +140,7 @@ export default function Dashboard({ auth, tribe, pending_count, stats, tribes, m
                                             <DownloadIcon />
                                         </span>
                                         <h3 className="text-brown-dark font-bold mb-1">تصدير بيانات الشجرة</h3>
-                                        <p className="text-brown-light text-xs leading-relaxed">حمّل أشخاص القبيلة كملف CSV</p>
+                                        <p className="text-brown-light text-xs leading-relaxed">حمّل أشخاص القبيلة كملف Excel</p>
                                     </a>
                                 )}
                             </>
@@ -220,7 +220,7 @@ function PackageUsage({ meta, slug }: { readonly meta: TribeMeta; readonly slug:
                         href={`/tribes/${slug}/admin/export/persons`}
                         className="inline-flex items-center gap-1.5 text-sm text-gold hover:text-gold-light font-medium"
                     >
-                        <DownloadIcon className="w-4 h-4" /> تصدير CSV
+                        <DownloadIcon className="w-4 h-4" /> تصدير Excel
                     </a>
                 )}
             </div>
