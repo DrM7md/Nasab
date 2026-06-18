@@ -1,5 +1,6 @@
 import AddPersonModal from '@/Components/Person/AddPersonModal';
 import FemaleNode from '@/Components/Tree/FemaleNode';
+import OrganicEdge from '@/Components/Tree/OrganicEdge';
 import PersonNode from '@/Components/Tree/PersonNode';
 import TreeControls from '@/Components/Tree/TreeControls';
 import {
@@ -62,6 +63,8 @@ function TreeCanvas({
         () => ({ personNode: PersonNode, femaleNode: FemaleNode }),
         [],
     );
+
+    const edgeTypes = useMemo(() => ({ organic: OrganicEdge }), []);
 
     /**
      * عند النقر على Node:
@@ -141,14 +144,29 @@ function TreeCanvas({
 
     return (
         <div
-            className="tree-bg w-full h-screen relative"
+            className="tree-bg w-full h-screen relative overflow-hidden"
             // React Flow يعمل LTR داخلياً
             dir="ltr"
         >
+            {/* تعريفات التدرّجات (لحاء + أوراق) — يشير إليها OrganicEdge عبر url(#bark) */}
+            <svg width="0" height="0" className="absolute" aria-hidden="true">
+                <defs>
+                    <linearGradient id="bark" x1="0" y1="1" x2="0" y2="0">
+                        <stop offset="0" stopColor="#5a3f28" />
+                        <stop offset="1" stopColor="#8a6233" />
+                    </linearGradient>
+                </defs>
+            </svg>
+
+            {/* أجواء حيّة: وهج شمس + كوكبة + ذرّات لقاح */}
+            <AmbientLayers />
+
             <ReactFlow
+                className="!z-[1]"
                 nodes={nodes}
                 edges={edges}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 onNodeClick={handleNodeClick}
                 fitView
                 fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
@@ -158,11 +176,7 @@ function TreeCanvas({
                 nodesConnectable={false}
                 elementsSelectable
                 proOptions={{ hideAttribution: true }}
-                defaultEdgeOptions={{
-                    type: 'smoothstep',
-                    style: { stroke: '#C9A84C', strokeWidth: 2 },
-                    animated: false,
-                }}
+                defaultEdgeOptions={{ type: 'organic' }}
             >
                 <Background
                     variant={BackgroundVariant.Dots}
@@ -241,6 +255,16 @@ function TreeCanvas({
                 <ThemeToggle />
             </div>
 
+            {/* شريط العنوان — أعلى الوسط */}
+            <div className="absolute top-5 left-1/2 -translate-x-1/2 z-10" dir="rtl" style={{ animation: 'nsFadeUp .6s ease-out .35s both' }}>
+                <div className="inline-flex items-center gap-2 bg-white/70 dark:bg-night-card/70 backdrop-blur-md border border-gold/20 rounded-full px-4 py-2 shadow-sm">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#5BAE52" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M12 22V12M12 12c0-4 3-7 8-7-1 5-4 7-8 7zM12 14c0-3-2-6-7-6 1 4 4 6 7 6z" />
+                    </svg>
+                    <span className="font-amiri text-brown-dark font-bold text-[15px]">شجرة النسب الحيّة</span>
+                </div>
+            </div>
+
             {/* العنوان + زر العودة للوحة التحكم */}
             <div className="absolute top-4 right-4 z-10 flex items-center gap-2" dir="rtl">
                 <Link
@@ -300,6 +324,58 @@ function TreeCanvas({
                     </Link>
                 )}
             </div>
+        </div>
+    );
+}
+
+/** أجواء حيّة خلف الشجرة: وهج شمس + كوكبة باهتة + ذرّات لقاح صاعدة. */
+function AmbientLayers() {
+    const pollen: Array<[number, number, number, number, number]> = [
+        [32, 14, 6, 9, 0],
+        [54, 10, 5, 11, 2],
+        [68, 18, 7, 10, 4],
+        [44, 8, 4, 13, 1],
+        [78, 12, 5, 12, 5.5],
+    ];
+    return (
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
+            {/* وهج الشمس خلف الجذع */}
+            <div
+                className="absolute left-1/2 -translate-x-1/2"
+                style={{
+                    bottom: '-6%',
+                    width: '62%',
+                    height: '74%',
+                    background: 'radial-gradient(circle, rgba(201,168,76,.30), rgba(201,168,76,.06) 55%, transparent 72%)',
+                    animation: 'nsGlow 7s ease-in-out infinite',
+                }}
+            />
+            {/* كوكبة باهتة */}
+            <svg viewBox="0 0 1280 900" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 w-full h-full opacity-30">
+                <g fill="#C9A84C">
+                    <circle cx={140} cy={120} r={2} />
+                    <circle cx={300} cy={70} r={1.5} />
+                    <circle cx={1120} cy={110} r={2} />
+                    <circle cx={980} cy={60} r={1.5} />
+                    <circle cx={1180} cy={240} r={1.5} />
+                    <circle cx={90} cy={260} r={1.5} />
+                </g>
+            </svg>
+            {/* ذرّات لقاح/ضوء */}
+            {pollen.map(([left, bottom, sz, dur, delay]) => (
+                <div
+                    key={`${left}-${bottom}`}
+                    className="ns-pollen absolute rounded-full"
+                    style={{
+                        left: `${left}%`,
+                        bottom: `${bottom}%`,
+                        width: sz,
+                        height: sz,
+                        background: 'radial-gradient(circle, #E8D69F, transparent)',
+                        animation: `nsRise ${dur}s linear ${delay}s infinite`,
+                    }}
+                />
+            ))}
         </div>
     );
 }

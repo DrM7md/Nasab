@@ -204,6 +204,7 @@ export interface PersonNodeData extends Record<string, unknown> {
     birth_year?: number | null;
     death_year?: number | null;
     life_status?: LifeStatus;
+    generation?: number;
 }
 
 /* ───────────── Landing Sections ───────────── */

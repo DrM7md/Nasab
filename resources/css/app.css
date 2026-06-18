@@ -78,10 +78,10 @@
 }
 
 @utility tree-bg {
-    background: linear-gradient(135deg, #F5EFE6 0%, #EDE4D8 50%, #E5D9C8 100%);
+    background: radial-gradient(120% 90% at 50% 108%, #F6E7C4 0%, #FBF4E6 46%, #FCF7EC 100%);
 }
 .dark .tree-bg {
-    background: linear-gradient(135deg, #1A1208 0%, #221810 50%, #2C1F10 100%);
+    background: radial-gradient(120% 90% at 50% 108%, #2C1F10 0%, #1A1208 50%, #0F0A05 100%);
 }
 
 @utility welcome-bg {
@@ -222,4 +222,23 @@
 @media (prefers-reduced-motion: reduce) {
     .ns-reveal, .ns-btn::after { animation: none !important; }
     .ns-reveal { opacity: 1 !important; transform: none !important; }
+}
+
+/* ═══════════════════════════════════════════════
+   الشجرة الحيّة (Living Tree) — حركات
+   ═══════════════════════════════════════════════ */
+@keyframes nsBranchDraw { from { stroke-dashoffset: 2200; } to { stroke-dashoffset: 0; } }
+@keyframes nsSway  { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(7deg); } }
+@keyframes nsSwayB { 0%, 100% { transform: rotate(5deg); }  50% { transform: rotate(-7deg); } }
+@keyframes nsRise  { 0% { transform: translateY(20px); opacity: 0; } 12% { opacity: .9; } 100% { transform: translateY(-180px); opacity: 0; } }
+@keyframes nsLivePulse { 0% { transform: scale(1); opacity: .6; } 70%, 100% { transform: scale(2.4); opacity: 0; } }
+@keyframes nsGlow  { 0%, 100% { opacity: .5; } 50% { opacity: .9; } }
+
+/* ميدالية الشخص — رفع لطيف عند المرور */
+.ns-medallion { transition: transform .25s cubic-bezier(.2, .8, .2, 1); }
+.ns-medallion:hover { transform: translateY(-4px); }
+
+@media (prefers-reduced-motion: reduce) {
+    .react-flow__edge-path { animation: none !important; stroke-dashoffset: 0 !important; }
+    [class*="nsSway"], .ns-pollen, .ns-glow, .ns-live-ring { animation: none !important; }
 }
