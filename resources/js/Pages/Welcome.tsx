@@ -1,26 +1,32 @@
 import ThemeToggle from '@/Components/UI/ThemeToggle';
-import type { PageProps } from '@/types';
+import { CheckIcon, PackageIcon, StarIcon } from '@/Components/UI/Icons';
+import { COUNTRIES, CURRENCY_LABEL, type Country, detectCountry, formatPrice } from '@/lib/currency';
+import type { Package, PageProps } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
+
+type WelcomeProps = PageProps<{ packages: Package[] }>;
 
 /**
  * Welcome — صفحة الجذر (Landing) لمنصّة نَسَب.
  * أُعيد بناؤها لتطابق تصميم "Landing - الجذر" بمكوّنات React/Tailwind وأنماط المشروع.
  */
-export default function Welcome({ auth, tribe }: PageProps) {
+export default function Welcome({ auth, tribe, packages = [] }: WelcomeProps) {
     const treeHref = tribe ? `/tribes/${tribe.slug}/tree` : null;
     const heroHref = treeHref ?? (auth.user ? route('dashboard') : route('register'));
+    const registerHref = auth.user ? route('dashboard') : route('register');
 
     return (
         <>
             <Head title="نَسَب — منصّة توثيق الأنساب القبلية" />
 
             <div className="landing-bg page-enter min-h-screen overflow-x-hidden text-brown-dark">
-                <NavBar auth={auth} treeHref={treeHref} />
+                <NavBar auth={auth} treeHref={treeHref} hasPricing={packages.length > 0} />
                 <Hero heroHref={heroHref} />
                 <Stats />
                 <Features />
-                <CtaBand registerHref={auth.user ? route('dashboard') : route('register')} />
+                {packages.length > 0 && <Pricing packages={packages} registerHref={registerHref} />}
+                <CtaBand registerHref={registerHref} />
                 <Footer />
             </div>
         </>
@@ -33,9 +39,11 @@ export default function Welcome({ auth, tribe }: PageProps) {
 function NavBar({
     auth,
     treeHref,
+    hasPricing,
 }: {
     readonly auth: PageProps['auth'];
     readonly treeHref: string | null;
+    readonly hasPricing: boolean;
 }) {
     return (
         <header className="landing-nav sticky top-0 z-30 backdrop-blur-md border-b border-gold/15">
@@ -54,7 +62,7 @@ function NavBar({
                 <nav className="hidden md:flex items-center gap-8 text-[14.5px] font-medium text-brown-mid">
                     <a href="#features" className="ns-link">الشجرة</a>
                     <a href="#stats" className="ns-link">القبائل</a>
-                    <a href="#features" className="ns-link">التوثيق</a>
+                    {hasPricing && <a href="#pricing" className="ns-link">الأسعار</a>}
                     <a href="#cta" className="ns-link">عن المنصّة</a>
                 </nav>
 
@@ -419,6 +427,151 @@ function Features() {
                 ))}
             </div>
         </section>
+    );
+}
+
+/* ═══════════════════════════════════════════════
+   التسعير + مُحوّل العملة حسب الدولة
+   ═══════════════════════════════════════════════ */
+function Pricing({ packages, registerHref }: { readonly packages: Package[]; readonly registerHref: string }) {
+    const [cycle, setCycle] = useState<'monthly' | 'yearly'>('monthly');
+    const [country, setCountry] = useState<Country>(COUNTRIES[0]);
+
+    // تخمين دولة الزائر من المتصفح عند التحميل
+    useEffect(() => {
+        setCountry(detectCountry());
+    }, []);
+
+    return (
+        <section id="pricing" className="max-w-[1180px] mx-auto px-5 sm:px-10 py-[72px]">
+            <div className="text-center mb-8 ns-reveal" style={{ animationRange: 'entry 0% cover 28%' }}>
+                <div className="text-[13px] tracking-[0.14em] text-gold font-semibold">الباقات والأسعار</div>
+                <h2 className="font-amiri font-bold text-brown-dark mt-2" style={{ fontSize: 'clamp(30px, 3.6vw, 40px)' }}>
+                    اختر ما يناسب قبيلتك
+                </h2>
+            </div>
+
+            {/* أدوات التحكّم: الدولة + دورة الفوترة */}
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
+                <label className="inline-flex items-center gap-2 bg-white dark:bg-night-card border border-gold/20 rounded-xl px-3 py-2 shadow-sm">
+                    <span className="text-brown-light text-xs">الدولة:</span>
+                    <select
+                        value={country.code}
+                        onChange={(e) => setCountry(COUNTRIES.find((c) => c.code === e.target.value) ?? COUNTRIES[0])}
+                        className="bg-transparent text-brown-dark text-sm font-medium focus:outline-none cursor-pointer"
+                    >
+                        {COUNTRIES.map((c) => (
+                            <option key={c.code} value={c.code}>
+                                {c.name_ar} ({CURRENCY_LABEL[c.currency]})
+                            </option>
+                        ))}
+                    </select>
+                </label>
+
+                <div className="inline-flex p-1 bg-white dark:bg-night-card rounded-xl border border-gold/20 shadow-sm">
+                    <CycleTab active={cycle === 'monthly'} onClick={() => setCycle('monthly')}>شهري</CycleTab>
+                    <CycleTab active={cycle === 'yearly'} onClick={() => setCycle('yearly')}>
+                        سنوي <span className="text-[10px] font-bold text-emerald-600">(وفّر أكثر)</span>
+                    </CycleTab>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+                {packages.map((pkg) => (
+                    <PricingCard key={pkg.id} pkg={pkg} cycle={cycle} currency={country.currency} registerHref={registerHref} />
+                ))}
+            </div>
+        </section>
+    );
+}
+
+function PricingCard({
+    pkg,
+    cycle,
+    currency,
+    registerHref,
+}: {
+    readonly pkg: Package;
+    readonly cycle: 'monthly' | 'yearly';
+    readonly currency: string;
+    readonly registerHref: string;
+}) {
+    const rawPrice = cycle === 'monthly' ? pkg.price_monthly : pkg.price_yearly;
+    const isFree = rawPrice === 0;
+    const cycleLabel = cycle === 'monthly' ? '/ شهريًا' : '/ سنويًا';
+
+    return (
+        <div
+            className={`ns-card ns-reveal relative flex flex-col bg-white dark:bg-night-card rounded-3xl border shadow-sm overflow-hidden ${
+                pkg.is_featured ? 'border-gold ring-2 ring-gold/30' : 'border-gold/15'
+            }`}
+            style={{ animationRange: 'entry 2% cover 34%' }}
+        >
+            {pkg.is_featured && (
+                <div className="absolute top-0 inset-x-0 bg-gradient-to-l from-gold to-gold-light text-white text-xs font-bold py-1.5 text-center flex items-center justify-center gap-1.5">
+                    <StarIcon className="w-3.5 h-3.5" /> الأكثر شيوعًا
+                </div>
+            )}
+
+            <div className={`p-6 ${pkg.is_featured ? 'pt-10' : ''} flex flex-col h-full`}>
+                <div className="flex items-center gap-2.5 mb-1">
+                    <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0" style={{ backgroundColor: pkg.color }}>
+                        <PackageIcon className="w-5 h-5" />
+                    </span>
+                    <h3 className="font-amiri text-xl font-bold text-brown-dark">{pkg.name_ar}</h3>
+                </div>
+
+                {pkg.description_ar && (
+                    <p className="text-brown-light text-xs leading-relaxed mb-4 min-h-[32px]">{pkg.description_ar}</p>
+                )}
+
+                <div className="mb-5">
+                    {isFree ? (
+                        <div className="font-amiri text-3xl font-bold text-gold">مجانًا</div>
+                    ) : (
+                        <div className="flex items-end gap-1.5">
+                            <span className="text-3xl font-bold text-brown-dark">{formatPrice(rawPrice, pkg.currency, currency)}</span>
+                            <span className="text-brown-mid text-sm font-medium mb-1">{CURRENCY_LABEL[currency]}</span>
+                            <span className="text-brown-light text-xs mb-1.5">{cycleLabel}</span>
+                        </div>
+                    )}
+                </div>
+
+                <ul className="space-y-2 mb-6 flex-1">
+                    {pkg.features.map((f, i) => (
+                        <li key={`${f}-${i}`} className="flex items-start gap-2 text-sm text-brown-mid">
+                            <span className="text-emerald-500 mt-0.5 shrink-0"><CheckIcon className="w-4 h-4" /></span>
+                            <span>{f}</span>
+                        </li>
+                    ))}
+                </ul>
+
+                <Link
+                    href={registerHref}
+                    className={`ns-btn mt-auto inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold shadow-md ${
+                        pkg.is_featured
+                            ? 'bg-gold text-white hover:bg-[#79540f]'
+                            : 'bg-gold-soft/70 text-brown-dark hover:bg-gold-soft'
+                    }`}
+                >
+                    <span className="relative z-10">{isFree ? 'ابدأ مجانًا' : 'ابدأ الآن'}</span>
+                </Link>
+            </div>
+        </div>
+    );
+}
+
+function CycleTab({ active, onClick, children }: { readonly active: boolean; readonly onClick: () => void; readonly children: React.ReactNode }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${
+                active ? 'bg-gold text-white shadow-sm' : 'text-brown-mid hover:bg-beige'
+            }`}
+        >
+            {children}
+        </button>
     );
 }
 
