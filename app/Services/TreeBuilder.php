@@ -138,9 +138,11 @@ class TreeBuilder
         $edges = [];
 
         foreach ($relations as $rel) {
-            // نُفضّل father كحافة رئيسية. لو لا أب: mother.
-            $parentId = $rel->father_id ?? $rel->mother_id;
-            if ($parentId && isset($personIds[$parentId]) && isset($personIds[$rel->child_id])) {
+            // نختار أفضل والد متاح ضمن العرض: الأب أولًا، وإلا الأم.
+            $parentId = isset($personIds[$rel->father_id]) ? $rel->father_id
+                : (isset($personIds[$rel->mother_id]) ? $rel->mother_id : null);
+
+            if ($parentId && isset($personIds[$rel->child_id])) {
                 $edges[] = [
                     'id'     => "e-{$parentId}-{$rel->child_id}",
                     'source' => (string) $parentId,
@@ -149,6 +151,19 @@ class TreeBuilder
                 ];
             }
         }
+
+        // نستبعد العُقَد المنفصلة تمامًا (بلا غصن داخل أو خارج) — كالزوجات
+        // المُصاهَرات بلا نسب في القبيلة — حتى لا تظهر معلّقة. تبقى مرئية في ملف الشخص.
+        $connected = [];
+        foreach ($edges as $e) {
+            $connected[$e['source']] = true;
+            $connected[$e['target']] = true;
+        }
+        $rootKey = (string) $this->tribe->root_person_id;
+        $nodes = array_values(array_filter(
+            $nodes,
+            fn ($n) => $n['id'] === $rootKey || isset($connected[$n['id']]),
+        ));
 
         return [
             'nodes'          => $nodes,
