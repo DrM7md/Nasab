@@ -50,6 +50,10 @@ Route::prefix('tribes/{tribe}')
 
             // إدارة الطلبات — للمشرفين (يُحرسها policy داخل الـ controller)
             Route::prefix('admin')->name('admin.')->group(function () {
+                // تصدير بيانات الشجرة (مقيَّد بقدرة الباقة)
+                Route::get('/export/persons', [\App\Http\Controllers\ExportController::class, 'persons'])
+                    ->name('export.persons');
+
                 Route::get('/pending-edits', [PendingEditController::class, 'index'])
                     ->name('pending-edits.index');
                 Route::post('/pending-edits/approve-all', [PendingEditController::class, 'approveAll'])

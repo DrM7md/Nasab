@@ -65,4 +65,45 @@ class Tribe extends Model
     {
         return 'slug';
     }
+
+    /* ═══════════════════════════════════════════════
+       حدود الباقة وقدراتها
+       ═══════════════════════════════════════════════ */
+
+    public function personLimit(): ?int
+    {
+        return $this->package?->max_persons;
+    }
+
+    public function memberLimit(): ?int
+    {
+        return $this->package?->max_members;
+    }
+
+    public function personCount(): int
+    {
+        return $this->persons()->where('status', 'approved')->count();
+    }
+
+    public function memberCount(): int
+    {
+        return $this->users()->count();
+    }
+
+    public function canAddPerson(): bool
+    {
+        $limit = $this->personLimit();
+        return $limit === null || $this->personCount() < $limit;
+    }
+
+    public function canAddMember(): bool
+    {
+        $limit = $this->memberLimit();
+        return $limit === null || $this->memberCount() < $limit;
+    }
+
+    public function hasCapability(string $key): bool
+    {
+        return (bool) $this->package?->hasCapability($key);
+    }
 }

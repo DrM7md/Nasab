@@ -161,6 +161,14 @@ class UserController extends Controller
             abort(403, 'يمكنك اعتماد الطلبات المتعلقة بقبيلتك فقط.');
         }
 
+        // فرض حدّ الأعضاء (للعضو العادي — التأسيس/المطالبة لهما باقتهما الخاصة)
+        if ($intent === User::INTENT_MEMBER) {
+            $targetTribe = Tribe::find($user->requested_tribe_id);
+            if ($targetTribe && ! $currentUser->isSuperAdmin() && ! $targetTribe->canAddMember()) {
+                return back()->with('error', "بلغت القبيلة الحدّ الأقصى لأعضاء باقتها ({$targetTribe->memberLimit()} عضو). يلزم ترقية الباقة.");
+            }
+        }
+
         DB::transaction(function () use ($user, $intent) {
             $tribe = Tribe::find($user->requested_tribe_id);
 

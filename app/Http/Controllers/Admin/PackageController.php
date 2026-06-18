@@ -29,6 +29,7 @@ class PackageController extends Controller
                 'price_yearly'  => (float) $p->price_yearly,
                 'currency'      => $p->currency,
                 'features'      => $p->features ?? [],
+                'capabilities'  => $p->capabilities ?? [],
                 'max_persons'   => $p->max_persons,
                 'max_members'   => $p->max_members,
                 'color'         => $p->color,
@@ -39,7 +40,8 @@ class PackageController extends Controller
             ]);
 
         return Inertia::render('Admin/Packages/Index', [
-            'packages' => $packages,
+            'packages'          => $packages,
+            'capabilityCatalog' => Package::CAPABILITIES,
         ]);
     }
 
@@ -105,6 +107,8 @@ class PackageController extends Controller
             'currency'       => ['sometimes', Rule::in(['SAR', 'QAR', 'AED', 'KWD', 'BHD', 'OMR', 'USD'])],
             'features'       => ['sometimes', 'array'],
             'features.*'     => ['string', 'max:255'],
+            'capabilities'   => ['sometimes', 'array'],
+            'capabilities.*' => [Rule::in(array_keys(Package::CAPABILITIES))],
             'max_persons'    => ['sometimes', 'nullable', 'integer', 'min:0'],
             'max_members'    => ['sometimes', 'nullable', 'integer', 'min:0'],
             'color'          => ['sometimes', 'string', 'max:16'],

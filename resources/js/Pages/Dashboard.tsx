@@ -6,8 +6,10 @@ import {
     ArrowLeftIcon,
     BellIcon,
     DocumentIcon,
+    DownloadIcon,
     KinshipIcon,
     LayoutIcon,
+    PackageIcon,
     PlusIcon,
     RocketIcon,
     SearchIcon,
@@ -39,13 +41,23 @@ interface Stats {
     tribe_pending?: number;
 }
 
+interface TribeMeta {
+    package_name: string | null;
+    person_count: number;
+    person_limit: number | null;
+    member_count: number;
+    member_limit: number | null;
+    can_export: boolean;
+}
+
 type DashProps = PageProps<{
     stats: Stats;
     tribes: TribeCard[];
     myTribe: { id: number; name_ar: string; slug: string } | null;
+    myTribeMeta: TribeMeta | null;
 }>;
 
-export default function Dashboard({ auth, tribe, pending_count, stats, tribes, myTribe }: DashProps) {
+export default function Dashboard({ auth, tribe, pending_count, stats, tribes, myTribe, myTribeMeta }: DashProps) {
     const user = auth.user!;
     const isSuper = user.role === 'super_admin';
 
@@ -99,6 +111,9 @@ export default function Dashboard({ auth, tribe, pending_count, stats, tribes, m
                     </Card>
                 )}
 
+                {/* ═════════ استهلاك الباقة ═════════ */}
+                {myTribeMeta && <PackageUsage meta={myTribeMeta} slug={myTribe?.slug ?? null} />}
+
                 {/* ═════════ الإجراءات الرئيسية ═════════ */}
                 <section className="space-y-4">
                     <SectionTitle icon={<RocketIcon />}>الإجراءات الرئيسية</SectionTitle>
@@ -116,6 +131,18 @@ export default function Dashboard({ auth, tribe, pending_count, stats, tribes, m
                                 <ActionCard icon={<TreeNodesIcon />} title="شجرة القبيلة" description="تصفّح وأدِر شجرة نسب القبيلة" href={`/tribes/${myTribe.slug}/tree`} primary />
                                 <ActionCard icon={<UsersIcon />} title="أعضاء القبيلة" description="أدِر أعضاء قبيلتك وصلاحياتهم" href={route('admin.users.index')} primary />
                                 <ActionCard icon={<ShieldCheckIcon />} title="طلبات الموافقة" description="راجع طلبات الإضافة والتعديل" href={`/tribes/${myTribe.slug}/admin/pending-edits`} badge={pending_count} primary />
+                                {myTribeMeta?.can_export && (
+                                    <a
+                                        href={`/tribes/${myTribe.slug}/admin/export/persons`}
+                                        className="ns-card group block p-5 rounded-2xl border border-gold/15 bg-white dark:bg-night-card shadow-sm"
+                                    >
+                                        <span className="w-12 h-12 rounded-2xl bg-gold-soft/50 border border-gold/20 text-gold flex items-center justify-center mb-3.5 group-hover:scale-105 transition-transform [&>svg]:w-6 [&>svg]:h-6">
+                                            <DownloadIcon />
+                                        </span>
+                                        <h3 className="text-brown-dark font-bold mb-1">تصدير بيانات الشجرة</h3>
+                                        <p className="text-brown-light text-xs leading-relaxed">حمّل أشخاص القبيلة كملف CSV</p>
+                                    </a>
+                                )}
                             </>
                         )}
 
@@ -181,6 +208,53 @@ export default function Dashboard({ auth, tribe, pending_count, stats, tribes, m
 }
 
 /* ═══════════════════════════════════════════════ */
+function PackageUsage({ meta, slug }: { readonly meta: TribeMeta; readonly slug: string | null }) {
+    return (
+        <Card className="p-5">
+            <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+                <SectionTitle icon={<PackageIcon />}>
+                    باقة القبيلة{meta.package_name ? ` — ${meta.package_name}` : ''}
+                </SectionTitle>
+                {meta.can_export && slug && (
+                    <a
+                        href={`/tribes/${slug}/admin/export/persons`}
+                        className="inline-flex items-center gap-1.5 text-sm text-gold hover:text-gold-light font-medium"
+                    >
+                        <DownloadIcon className="w-4 h-4" /> تصدير CSV
+                    </a>
+                )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <UsageBar label="الأشخاص" count={meta.person_count} limit={meta.person_limit} />
+                <UsageBar label="الأعضاء" count={meta.member_count} limit={meta.member_limit} />
+            </div>
+        </Card>
+    );
+}
+
+function UsageBar({ label, count, limit }: { readonly label: string; readonly count: number; readonly limit: number | null }) {
+    const unlimited = limit === null;
+    const pct = unlimited || limit === 0 ? 0 : Math.min(100, Math.round((count / limit) * 100));
+    const near = !unlimited && pct >= 80;
+    return (
+        <div>
+            <div className="flex items-center justify-between text-sm mb-1.5">
+                <span className="text-brown-mid">{label}</span>
+                <span className="font-bold text-brown-dark">
+                    {count.toLocaleString('en-US')}
+                    <span className="text-brown-light font-normal"> / {unlimited ? 'غير محدود' : limit.toLocaleString('en-US')}</span>
+                </span>
+            </div>
+            <div className="h-2.5 rounded-full bg-beige-dark/60 dark:bg-night-bg overflow-hidden">
+                <div
+                    className={`h-full rounded-full transition-all ${near ? 'bg-rose-500' : 'bg-gradient-to-l from-gold to-gold-light'}`}
+                    style={{ width: unlimited ? '12%' : `${pct}%`, opacity: unlimited ? 0.4 : 1 }}
+                />
+            </div>
+        </div>
+    );
+}
+
 function StatTile({
     label,
     value,

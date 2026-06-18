@@ -23,9 +23,10 @@ const CURRENCIES = ['SAR', 'QAR', 'AED', 'KWD', 'BHD', 'OMR', 'USD'] as const;
 
 type PackagesIndexProps = PageProps<{
     packages: Package[];
+    capabilityCatalog: Record<string, string>;
 }>;
 
-export default function PackagesIndex({ packages }: PackagesIndexProps) {
+export default function PackagesIndex({ packages, capabilityCatalog }: PackagesIndexProps) {
     const [cycle, setCycle] = useState<Cycle>('monthly');
     const [creating, setCreating] = useState(false);
     const [editing, setEditing] = useState<Package | null>(null);
@@ -95,8 +96,8 @@ export default function PackagesIndex({ packages }: PackagesIndexProps) {
                 )}
             </div>
 
-            {creating && <PackageFormModal onClose={() => setCreating(false)} />}
-            {editing && <PackageFormModal pkg={editing} onClose={() => setEditing(null)} />}
+            {creating && <PackageFormModal catalog={capabilityCatalog} onClose={() => setCreating(false)} />}
+            {editing && <PackageFormModal pkg={editing} catalog={capabilityCatalog} onClose={() => setEditing(null)} />}
             {deleting && <DeletePackageModal pkg={deleting} onClose={() => setDeleting(null)} />}
         </AuthenticatedLayout>
     );
@@ -233,7 +234,7 @@ function CycleTab({ active, onClick, children }: { readonly active: boolean; rea
 /* ═══════════════════════════════════════════════
    نموذج إنشاء/تعديل الباقة
    ═══════════════════════════════════════════════ */
-function PackageFormModal({ pkg, onClose }: { readonly pkg?: Package; readonly onClose: () => void }) {
+function PackageFormModal({ pkg, catalog, onClose }: { readonly pkg?: Package; readonly catalog: Record<string, string>; readonly onClose: () => void }) {
     const isEdit = !!pkg;
 
     const { data, setData, post, patch, processing, errors, reset } = useForm({
@@ -243,12 +244,19 @@ function PackageFormModal({ pkg, onClose }: { readonly pkg?: Package; readonly o
         price_yearly: pkg?.price_yearly ?? 0,
         currency: pkg?.currency ?? 'SAR',
         features: pkg?.features ?? [],
+        capabilities: pkg?.capabilities ?? [],
         max_persons: pkg?.max_persons ?? (null as number | null),
         max_members: pkg?.max_members ?? (null as number | null),
         color: pkg?.color ?? '#8B6914',
         is_featured: pkg?.is_featured ?? false,
         is_active: pkg?.is_active ?? true,
     });
+
+    const toggleCap = (key: string) => {
+        setData('capabilities', data.capabilities.includes(key)
+            ? data.capabilities.filter((c) => c !== key)
+            : [...data.capabilities, key]);
+    };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -342,6 +350,20 @@ function PackageFormModal({ pkg, onClose }: { readonly pkg?: Package; readonly o
                             </div>
                         ))}
                     </div>
+                </div>
+
+                {/* القدرات المُفعّلة فعليًا */}
+                <div>
+                    <div className="text-brown-dark text-xs font-bold mb-2">القدرات المُفعّلة (تتحكّم بما يُتاح فعليًا)</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {Object.entries(catalog).map(([key, label]) => (
+                            <label key={key} className="inline-flex items-center gap-2 cursor-pointer text-sm p-2 rounded-lg border border-gold/15 hover:bg-beige/50 transition-colors">
+                                <input type="checkbox" checked={data.capabilities.includes(key)} onChange={() => toggleCap(key)} className="w-4 h-4 accent-gold" />
+                                <span className="text-brown-dark">{label}</span>
+                            </label>
+                        ))}
+                    </div>
+                    <p className="text-brown-light text-[11px] mt-1.5">«تصدير البيانات» مفروضة برمجيًا. البقية إعلامية/تشغيلية حتى تُبنى.</p>
                 </div>
 
                 {/* مفاتيح */}

@@ -140,6 +140,12 @@ class PersonController extends Controller
             'الإنشاء السريع متاح للمشرفين فقط.'
         );
 
+        if (! $user->isSuperAdmin() && ! $tribe->canAddPerson()) {
+            return response()->json([
+                'message' => "بلغت قبيلتك الحدّ الأقصى لباقتها ({$tribe->personLimit()} شخص). يلزم ترقية الباقة لإضافة المزيد.",
+            ], 422);
+        }
+
         $validated = $request->validate([
             'name_ar'       => 'required|string|max:255',
             'short_name_ar' => 'required|string|max:100',

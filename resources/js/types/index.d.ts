@@ -142,6 +142,7 @@ export interface Package {
     price_yearly: number;
     currency: string;
     features: string[];
+    capabilities?: string[];
     max_persons: number | null;
     max_members: number | null;
     color: string;

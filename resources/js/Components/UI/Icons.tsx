@@ -235,6 +235,12 @@ export const LinkIcon = (p: IconProps) => (
     </Base>
 );
 
+export const DownloadIcon = (p: IconProps) => (
+    <Base {...p}>
+        <path d="M12 3v12M8 11l4 4 4-4M4 19h16" />
+    </Base>
+);
+
 export const PackageIcon = (p: IconProps) => (
     <Base {...p}>
         <path d="M21 8l-9-5-9 5 9 5 9-5z" />

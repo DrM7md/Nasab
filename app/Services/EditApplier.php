@@ -128,6 +128,14 @@ class EditApplier
      */
     protected function applyAddPerson(PendingEdit $edit): Person
     {
+        // فرض حدّ الأشخاص حسب باقة القبيلة (المدير العام مستثنى)
+        $tribe = Tribe::find($edit->tribe_id);
+        if ($tribe && ! $tribe->canAddPerson() && ! $edit->requester?->isSuperAdmin()) {
+            throw new RuntimeException(
+                "بلغت القبيلة الحدّ الأقصى لباقتها ({$tribe->personLimit()} شخص). يلزم ترقية الباقة لإضافة المزيد."
+            );
+        }
+
         $data = $edit->proposed_data;
 
         $personData = array_intersect_key($data, array_flip(self::PERSON_FIELDS));

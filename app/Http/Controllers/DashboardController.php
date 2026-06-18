@@ -20,7 +20,27 @@ class DashboardController extends Controller
             'stats'        => $this->statsFor($user),
             'tribes'       => $this->tribesFor($user),
             'myTribe'      => $user->tribe_id ? $this->briefTribe($user->tribe) : null,
+            'myTribeMeta'  => ($user->tribe_id && $user->canModerate()) ? $this->tribeMeta($user->tribe) : null,
         ]);
+    }
+
+    /**
+     * بيانات باقة قبيلة المستخدم: الاستهلاك مقابل الحدود + القدرات المتاحة.
+     */
+    protected function tribeMeta(?Tribe $tribe): ?array
+    {
+        if (! $tribe) {
+            return null;
+        }
+
+        return [
+            'package_name' => $tribe->package?->name_ar,
+            'person_count' => $tribe->personCount(),
+            'person_limit' => $tribe->personLimit(),
+            'member_count' => $tribe->memberCount(),
+            'member_limit' => $tribe->memberLimit(),
+            'can_export'   => $tribe->hasCapability('data_export'),
+        ];
     }
 
     /**
