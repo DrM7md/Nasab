@@ -1,0 +1,225 @@
+@import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
+
+@plugin "@tailwindcss/forms";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+    /* ═══════════════════════════════════════════════
+       ألوان المشروع — الهوية البصرية (شجرة النسب)
+       ═══════════════════════════════════════════════ */
+    --color-gold: #8B6914;
+    --color-gold-light: #C9A84C;
+    --color-gold-soft: #E8D69F;
+
+    --color-beige: #F5EFE6;
+    --color-beige-dark: #E8DDD0;
+
+    --color-brown-dark: #3D2B1F;
+    --color-brown-mid: #6B4E3D;
+    --color-brown-light: #A08070;
+
+    /* وضع الليل */
+    --color-night-bg: #1A1208;
+    --color-night-card: #2C1F10;
+    --color-night-border: #4A3728;
+    --color-night-text: #F5EFE6;
+
+    /* الخطوط */
+    --font-arabic: 'Tajawal', 'Cairo', 'Segoe UI', sans-serif;
+    --font-naskh: 'Noto Naskh Arabic', 'Amiri', serif;
+    --font-amiri: 'Amiri', 'Noto Naskh Arabic', serif;
+
+    /* Breakpoints إضافية */
+    --breakpoint-xs: 375px;
+}
+
+/* ═══════════════════════════════════════════════
+   أساسيات الاتجاه والخط
+   ═══════════════════════════════════════════════ */
+@layer base {
+    html {
+        direction: rtl;
+        font-family: var(--font-arabic);
+    }
+
+    body {
+        background-color: var(--color-beige);
+        color: var(--color-brown-dark);
+    }
+
+    .dark body {
+        background-color: var(--color-night-bg);
+        color: var(--color-night-text);
+    }
+}
+
+/* ═══════════════════════════════════════════════
+   Animations
+   ═══════════════════════════════════════════════ */
+@keyframes pageEnter {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@utility page-enter {
+    animation: pageEnter 0.35s ease-out;
+}
+
+/* ═══════════════════════════════════════════════
+   Backgrounds — تتغير مع dark mode
+   ═══════════════════════════════════════════════ */
+@utility page-bg {
+    background: linear-gradient(135deg, #F5EFE6 0%, #EDE4D8 60%, #E5D9C8 100%);
+}
+.dark .page-bg {
+    background: linear-gradient(135deg, #0F0A05 0%, #1A1208 40%, #221810 100%);
+}
+
+@utility tree-bg {
+    background: linear-gradient(135deg, #F5EFE6 0%, #EDE4D8 50%, #E5D9C8 100%);
+}
+.dark .tree-bg {
+    background: linear-gradient(135deg, #1A1208 0%, #221810 50%, #2C1F10 100%);
+}
+
+@utility welcome-bg {
+    background: linear-gradient(135deg, #2C1F10 0%, #3D2B1F 40%, #4A3728 80%, #2C1F10 100%);
+}
+.dark .welcome-bg {
+    background: linear-gradient(135deg, #0F0A05 0%, #1A1208 40%, #221810 80%, #0F0A05 100%);
+}
+
+/* ═══════════════════════════════════════════════
+   Dark Mode — قواعد شاملة لتحويل الألوان تلقائياً
+   بدلاً من إضافة dark: على كل عنصر
+   ═══════════════════════════════════════════════ */
+.dark .text-brown-dark  { color: #F5EFE6 !important; }
+.dark .text-brown-mid   { color: #C9B89D !important; }
+.dark .text-brown-light { color: #8A7868 !important; }
+
+.dark .bg-white         { background-color: #2C1F10 !important; }
+.dark .bg-beige         { background-color: #221810 !important; }
+.dark .bg-beige-dark    { background-color: #1A1208 !important; }
+
+/* خلفيات شفافة تبقى شفافة لكن بظلال داكنة */
+.dark .bg-white\/80  { background-color: rgba(44, 31, 16, 0.85) !important; }
+.dark .bg-white\/90  { background-color: rgba(44, 31, 16, 0.92) !important; }
+.dark .bg-white\/60  { background-color: rgba(44, 31, 16, 0.65) !important; }
+.dark .bg-white\/5   { background-color: rgba(255, 255, 255, 0.05) !important; }
+
+/* gradients من white/beige → night-card */
+.dark .from-white       { --tw-gradient-from: #2C1F10 !important; }
+.dark .to-white         { --tw-gradient-to:   #2C1F10 !important; }
+.dark .from-beige       { --tw-gradient-from: #221810 !important; }
+.dark .to-beige         { --tw-gradient-to:   #221810 !important; }
+
+/* حدود: الخفيفة تصبح أغمق */
+.dark .border-gold\/20  { border-color: rgba(201, 168, 76, 0.25) !important; }
+.dark .border-gold\/10  { border-color: rgba(201, 168, 76, 0.15) !important; }
+.dark .border-gold\/30  { border-color: rgba(201, 168, 76, 0.35) !important; }
+
+/* حقول الإدخال */
+.dark input, .dark textarea, .dark select {
+    background-color: #2C1F10 !important;
+    color: #F5EFE6 !important;
+    border-color: rgba(201, 168, 76, 0.3) !important;
+}
+.dark input::placeholder, .dark textarea::placeholder {
+    color: rgba(245, 239, 230, 0.35) !important;
+}
+
+/* شريط تمرير داكن */
+.dark ::-webkit-scrollbar { background: #1A1208; }
+.dark ::-webkit-scrollbar-thumb { background: #4A3728; border-radius: 4px; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #6B4E3D; }
+
+/* React Flow في الوضع الليلي */
+.dark .react-flow__edge-path {
+    stroke: #C9A84C !important;
+    opacity: 0.7;
+}
+.dark .react-flow__attribution { display: none; }
+
+/* ═══════════════════════════════════════════════
+   صفحة الجذر (Landing) — حركات وأنماط
+   ═══════════════════════════════════════════════ */
+@keyframes nsFadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes nsReveal { from { opacity: 0; transform: translateY(34px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes nsTwinkle { 0%, 100% { opacity: .18; } 50% { opacity: 1; } }
+@keyframes nsPulse { 0% { transform: scale(1); opacity: .55; } 70%, 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes nsFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+@keyframes nsDrift { 0% { transform: translate(0, 0); } 50% { transform: translate(-10px, 6px); } 100% { transform: translate(0, 0); } }
+@keyframes nsDraw { from { stroke-dashoffset: 640; } to { stroke-dashoffset: 0; } }
+@keyframes nsShimmer { 0% { transform: translateX(-180%) skewX(-18deg); } 55%, 100% { transform: translateX(220%) skewX(-18deg); } }
+@keyframes nsPop { 0% { opacity: 0; transform: scale(0); } 60% { transform: scale(1.18); } 100% { opacity: 1; transform: scale(1); } }
+
+/* خلفيات الصفحة (فاتحة كريمية ↔ ليلية) */
+@utility landing-bg { background: #FAF6EE; }
+.dark .landing-bg { background: var(--color-night-bg); }
+
+.landing-nav { background: rgba(250, 246, 238, .82); }
+.dark .landing-nav { background: rgba(26, 18, 8, .82); }
+
+.landing-band { background: #F5EDDF; }
+.dark .landing-band { background: var(--color-night-card); }
+
+.landing-visual { background: linear-gradient(160deg, #fff, #F5EDDF); }
+.dark .landing-visual { background: linear-gradient(160deg, #2C1F10, #221810); }
+
+.landing-cta { background: linear-gradient(160deg, #FFFCF5 0%, #F6EAD0 55%, #EEDDBD 100%); }
+.dark .landing-cta { background: linear-gradient(160deg, #2C1F10 0%, #3A2A14 55%, #241A0C 100%); }
+
+/* كشف العناصر عند التمرير عبر view() timeline (مع fallback يُظهر المحتوى) */
+.ns-reveal { animation: nsReveal both; }
+@supports (animation-timeline: view()) {
+    .ns-reveal {
+        animation-timeline: view();
+        animation-range: entry 0% cover 25%;
+    }
+}
+
+/* رابط القائمة: خط سفلي ذهبي يتنامى */
+.ns-link {
+    position: relative;
+    text-decoration: none;
+    padding-bottom: 5px;
+    background-image: linear-gradient(var(--color-gold), var(--color-gold));
+    background-repeat: no-repeat;
+    background-position: right 100%;
+    background-size: 0% 2px;
+    transition: color .25s ease, background-size .3s cubic-bezier(.2, .8, .2, 1);
+}
+.ns-link:hover { color: var(--color-gold); background-size: 100% 2px; }
+
+/* زر فاخر: رفع + لمعان متحرّك */
+.ns-btn {
+    position: relative;
+    overflow: hidden;
+    transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s ease, background-color .25s ease;
+}
+.ns-btn:hover { transform: translateY(-2px); }
+.ns-btn::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: 35%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .4), transparent);
+    transform: translateX(-180%) skewX(-18deg);
+    animation: nsShimmer 3.6s ease-in-out infinite;
+}
+
+/* بطاقة ميزة: رفع عند المرور */
+.ns-card { transition: transform .3s cubic-bezier(.2, .8, .2, 1), box-shadow .3s ease, border-color .3s ease; }
+.ns-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 18px 40px rgba(60, 43, 31, .12);
+    border-color: rgba(139, 105, 20, .4);
+}
+
+/* احترام تفضيل تقليل الحركة */
+@media (prefers-reduced-motion: reduce) {
+    .ns-reveal, .ns-btn::after { animation: none !important; }
+    .ns-reveal { opacity: 1 !important; transform: none !important; }
+}
